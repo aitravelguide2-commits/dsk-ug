@@ -98,7 +98,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import StatCard from '../components/ui/StatCard.vue'
-import { useAccommodationsStore } from '../stores/accommodations'
+import { useAccommodations } from '../stores/accommodations'
 
 const stats = [
   { title: 'Auslastung', value: '68%', icon: 'trending_up', color: 'positive' },
@@ -136,7 +136,7 @@ function reloadBookings() {
   recentBookings.value = [...recentBookings.value]
 }
 
-const store = useAccommodationsStore()
+const store = useAccommodations()
 const accommodationCards = computed(() => {
   const items = store.items || []
   return items.slice(0, 6).map((it, idx) => ({
