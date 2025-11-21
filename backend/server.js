@@ -3,8 +3,11 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-import sequelize from './config/db.js';
+import { sequelize } from './config/db.js';
+// Load environment variables from .env file
+dotenv.config();
 // Modelle und Relationen initialisieren (Side-Effect Import)
 import './models/index.js';
 import routes from './routes/index.js';
