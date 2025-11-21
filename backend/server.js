@@ -14,8 +14,8 @@ import errorHandler from './middleware/error.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load env from project root to share keys across FE/BE
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Load env from backend directory
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 
