@@ -41,6 +41,15 @@ console.log('🔑 Environment check:', {
 
 const app = express();
 
+// DEBUG: Intercept ALL requests immediately
+app.use((req, res, next) => {
+  console.log('🔍 DEBUG: Request received:', req.method, req.url);
+  if (req.query.debug === 'true') {
+    return res.json({ msg: 'Debug Middleware reached!', env: !!process.env.SUPABASE_PROJECT_URL });
+  }
+  next();
+});
+
 // CORS configuration
 const allowedOrigins = [
   'https://traesyj8lzvf-42yhsybim-aitravelguide2-commits-projects.vercel.app',
