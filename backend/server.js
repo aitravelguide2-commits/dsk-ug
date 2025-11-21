@@ -45,17 +45,26 @@ const app = express();
 app.use((req, res, next) => {
   console.log('🔍 DEBUG: Request received:', req.method, req.url);
   if (req.query.debug === 'true') {
-    return res.json({ msg: 'Debug Middleware reached!', env: !!process.env.SUPABASE_PROJECT_URL });
+    console.log('🔍 DEBUG: Sending debug response');
+    return res.json({ 
+      msg: 'Debug Middleware reached!', 
+      env: !!process.env.SUPABASE_PROJECT_URL,
+      envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+    });
   }
   next();
 });
 
 // CORS configuration
 const allowedOrigins = [
+  'https://traesyj8lzvf.vercel.app', // New Vercel URL
   'https://traesyj8lzvf-42yhsybim-aitravelguide2-commits-projects.vercel.app',
-  'http://localhost:5174',  // Customer frontend dev
-  'http://localhost:5173',  // Admin frontend dev
-  'http://localhost:3000',  // Alternative dev port
+  'https://dsk-ug.de',
+  'https://www.dsk-ug.de',
+  'https://admin.dsk-ug.de',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000' // Alternative dev port
 ];
 
 app.use(cors({
