@@ -8,8 +8,17 @@ const router = express.Router()
 // Public: List accommodations (active by default)
 router.get('/accommodations', async (req, res, next) => {
   try {
+    console.log('🔍 Catalog Route - Environment check:', {
+      hasSupabaseURL: !!process.env.SUPABASE_PROJECT_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE,
+      urlValue: process.env.SUPABASE_PROJECT_URL ? 'SET' : 'MISSING',
+      keyValue: process.env.SUPABASE_SERVICE_ROLE ? 'SET (length: ' + process.env.SUPABASE_SERVICE_ROLE?.length + ')' : 'MISSING'
+    });
+    
     const { minGuests, isActive } = req.query
+    console.log('📞 Calling getSupabase()...');
     const supa = getSupabase()
+    console.log('✅ getSupabase() returned successfully');
     let q = supa.from('accommodations').select('*').order('updated_at', { ascending: false })
     if (isActive !== 'all') q = q.eq('is_active', true)
     if (minGuests) q = q.gte('max_guests', Number(minGuests))
