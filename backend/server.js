@@ -1,4 +1,16 @@
 import 'dotenv/config'; // Load env vars before ANY other import
+
+console.log('=== START server.js - initial env SUPABASE_PROJECT_URL:', !!process.env.SUPABASE_PROJECT_URL);
+console.log('ENV_KEYS_COUNT:', Object.keys(process.env).length);
+
+// Background checker to see if env vars disappear
+setInterval(() => {
+  if (!process.env.SUPABASE_PROJECT_URL) {
+    console.error('!!! SUPABASE_PROJECT_URL DISAPPEARED! Current keys:', Object.keys(process.env).slice(0,50));
+    // console.trace(); // Trace might be too noisy in interval, but useful if it happens once
+  }
+}, 2000);
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';

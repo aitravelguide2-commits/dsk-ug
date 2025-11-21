@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 let client
 export const getSupabase = () => {
   if (!client) {
+    console.log('=== BEFORE supabase createClient - SUPABASE_PROJECT_URL:', process.env.SUPABASE_PROJECT_URL);
+    // console.trace('stack trace: supabase init called from:'); // Uncomment if needed, can be noisy
+    
     const url = process.env.SUPABASE_PROJECT_URL
     const key = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVIDE_ROLE
     
