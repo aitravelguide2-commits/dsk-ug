@@ -16,6 +16,16 @@ const __dirname = path.dirname(__filename);
 // Environment variables are provided by PM2 ecosystem.config.cjs
 // No need to load .env file manually
 
+console.log('🚀 Starting backend server...');
+console.log('🔑 Environment check:', {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  hasSupabaseURL: !!process.env.SUPABASE_PROJECT_URL,
+  hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE,
+  hasDBHost: !!process.env.DB_HOST,
+  totalEnvKeys: Object.keys(process.env).length
+});
+
 const app = express();
 
 // CORS configuration
@@ -51,13 +61,18 @@ const uploadDir = path.join(__dirname, process.env.UPLOAD_PATH || 'uploads/image
 fs.mkdirSync(uploadDir, { recursive: true });
 app.use('/uploads', cors(), express.static(uploadDir));
 
+console.log('📂 Upload directory:', uploadDir);
+
 // Initialise DB
 try {
+  console.log('🔌 Authenticating database connection...');
   await sequelize.authenticate();
+  console.log('🔄 Synchronizing database schema...');
   await sequelize.sync();
   console.log('✅ DB synchronised');
 } catch (err) {
   console.error('❌ DB connection failed:', err.message);
+  console.error('Full error:', err);
 }
 
 // API routes
