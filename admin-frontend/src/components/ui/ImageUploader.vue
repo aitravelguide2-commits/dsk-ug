@@ -1,191 +1,80 @@
 <template>
-  <div class="modern-image-uploader">
-    <!-- Upload Header -->
-    <div class="upload-header">
-      <div class="header-info">
-        <h3 class="upload-title">Bilder</h3>
-        <p class="upload-subtitle">Fügen Sie mindestens 5 Bilder hinzu. Je mehr, desto besser!</p>
-      </div>
-      <div class="header-actions">
-        <q-select 
-          v-model="quality" 
-          :options="qualityOptions" 
-          label="Qualität" 
-          dense 
-          outlined 
-          style="min-width: 160px"
-          class="quality-select"
-        />
-        <q-btn 
-          color="primary" 
-          icon="add_photo_alternate"
-          label="Bilder hinzufügen"
-          @click="$refs.fileInput.click()"
-          unelevated
-          class="add-btn"
-        />
-        <input 
-          ref="fileInput" 
-          type="file" 
-          multiple 
-          accept=".jpg,.jpeg,.png,.webp" 
-          @change="handleFiles" 
-          style="display:none" 
-        />
-      </div>
+  <div>
+    <div class="uploader-toolbar q-mb-sm">
+      <q-btn flat dense icon="auto_fix_high" label="Auto-arrange" @click="autoArrange" />
+      <q-separator vertical inset class="q-mx-sm" />
+      <q-select v-model="quality" :options="qualityOptions" label="Qualität" dense outlined style="min-width: 160px" />
+      <q-btn color="primary" dense class="q-ml-sm" @click="$refs.fileInput.click()">Bilder hinzufügen</q-btn>
+      <input ref="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.webp" @change="handleFiles" style="display:none" />
+      <q-space />
+      <div class="text-caption text-grey-7">Max 30 Bilder · jpg/jpeg/png/webp · 10MB</div>
     </div>
-
-    <!-- Drop Zone (shown when no images) -->
-    <div 
-      v-if="!images || images.length === 0"
-      class="drop-zone"
-      @dragover.prevent="dragOver = true"
-      @dragleave.prevent="dragOver = false"
-      @drop.prevent="handleDrop"
-      :class="{ 'drag-over': dragOver }"
-      @click="$refs.fileInput.click()"
-    >
-      <div class="drop-zone-content">
-        <q-icon name="cloud_upload" size="64px" color="primary" />
-        <h4 class="drop-title">Bilder hierher ziehen oder klicken</h4>
-        <p class="drop-subtitle">JPG, PNG oder WebP (max. 10MB pro Bild)</p>
-        <q-btn 
-          label="Bilder auswählen" 
-          color="primary" 
-          outline
-          class="q-mt-md"
-        />
-      </div>
-    </div>
-
-    <!-- Image Grid -->
-    <div v-else class="image-grid">
-      <div
+    <q-uploader
+      label="Bilder auswählen (Drag & Drop)"
+      multiple
+      accept=".jpg,.jpeg,.png,.webp"
+      :url="uploadUrl"
+      :headers="authHeader"
+      :field-name="'images'"
+      :batch="true"
+      :max-files="30"
+      :max-file-size="10 * 1024 * 1024"
+      :disable="!id"
+      auto-upload
+      hide-upload-btn
+      @uploaded="onUpload"
+      @removed="onRemove"
+      @rejected="onRejected"
+      @failed="onFailed"
+      class="q-mb-md uploader-area"
+    />
+    <div class="image-grid q-mt-md">
+      <q-card
         v-for="(img, idx) in images"
         :key="img.filename"
-        class="image-item"
-        :class="{ 'is-cover': idx === 0 }"
+        class="image-card"
         draggable="true"
         @dragstart="onDragStart(idx)"
         @dragover.prevent
         @drop="onDrop(idx)"
       >
-        <!-- Cover Badge -->
-        <div v-if="idx === 0" class="cover-badge">
-          <q-icon name="star" size="16px" />
-          <span>Titelbild</span>
-        </div>
-
-        <!-- Image Preview -->
-        <div class="image-preview" @click="openLightbox(idx)">
-          <img :src="displayUrl(img.url)" :alt="img.title || ''" />
-          <div class="image-overlay">
-            <q-btn 
-              round 
-              flat 
-              icon="zoom_in" 
-              color="white"
-              size="md"
-            />
-          </div>
-        </div>
-
-        <!-- Image Actions -->
+        <q-img :src="displayUrl(img.url)" fit="cover" class="image-preview" @click="openLightbox(idx)" />
         <div class="image-actions">
-          <q-btn 
-            dense 
-            flat 
-            round 
-            icon="delete" 
-            color="negative"
-            @click.stop="confirmRemove(img.filename)"
-            :loading="progress[img.filename] === -1"
-            class="delete-btn"
-          >
-            <q-tooltip>Löschen</q-tooltip>
-          </q-btn>
-          <q-btn 
-            v-if="idx !== 0"
-            dense 
-            flat 
-            round 
-            icon="star_border" 
-            @click.stop="onSetCover(idx)"
-            class="star-btn"
-          >
-            <q-tooltip>Als Titelbild setzen</q-tooltip>
-          </q-btn>
+          <q-btn dense flat round icon="drag_indicator" class="drag-handle" title="Ziehen zum Sortieren" />
+          <div class="spacer" />
+          <q-btn dense flat round icon="zoom_in" @click="openPreview(img)" title="Vorschau" />
+          <q-btn dense flat round icon="star" :color="idx === 0 ? 'yellow-8' : 'grey-6'" @click="onSetCover(idx)" :title="idx === 0 ? 'Titelbild' : 'Als Titelbild setzen'" />
+          <q-btn dense flat round icon="chevron_left" @click="onMoveLeft(idx)" :disable="idx === 0" title="Nach links" />
+          <q-btn dense flat round icon="chevron_right" @click="onMoveRight(idx)" :disable="idx === images.length - 1" title="Nach rechts" />
+          
         </div>
-
-        <!-- Progress Bar -->
-        <div v-if="progress[img.filename] >= 0 && progress[img.filename] < 100" class="progress-bar">
-          <div class="progress-fill" :style="{ width: progress[img.filename] + '%' }"></div>
+        <q-btn dense flat round icon="delete" color="negative" class="image-delete" @click.stop="confirmRemove(img.filename)" title="Löschen" />
+        <div v-if="progress[img.filename] >= 0" class="progress">
+          <div class="bar" :style="{ width: (progress[img.filename] || 0) + '%' }"></div>
         </div>
-
-        <!-- Image Caption -->
-        <div class="image-caption">
-          <q-input 
-            v-model="img.title" 
-            dense 
-            filled
-            placeholder="Bildtitel hinzufügen..."
-            class="caption-input"
-          />
+        <q-badge v-if="idx === 0" color="primary" class="title-badge">Titelbild</q-badge>
+        <div class="caption-row q-pa-xs">
+          <q-input v-model="img.title" dense filled placeholder="Bildtitel / Caption" />
         </div>
-
-        <!-- Drag Handle -->
-        <div class="drag-handle">
-          <q-icon name="drag_indicator" size="20px" />
-        </div>
-      </div>
-
-      <!-- Add More Button -->
-      <div class="add-more-card" @click="$refs.fileInput.click()">
-        <div class="add-more-content">
-          <q-icon name="add_circle_outline" size="48px" color="primary" />
-          <span class="add-more-text">Weitere Bilder hinzufügen</span>
-        </div>
-      </div>
+      </q-card>
     </div>
 
-    <!-- Image Count Info -->
-    <div v-if="images && images.length > 0" class="image-info">
-      <div class="info-item">
-        <q-icon name="photo_library" size="20px" />
-        <span>{{ images.length }} {{ images.length === 1 ? 'Bild' : 'Bilder' }}</span>
-      </div>
-      <div class="info-item">
-        <q-icon name="info" size="20px" />
-        <span>Ziehen Sie Bilder, um die Reihenfolge zu ändern</span>
-      </div>
-    </div>
-
-    <!-- Lightbox -->
     <div v-if="preview" class="lightbox" @click="closeLightbox">
       <button class="lightbox-close" @click.stop="closeLightbox" aria-label="Schließen">
-        <q-icon name="close" size="24px" />
+        ✕
       </button>
       <div class="lightbox-count">{{ current + 1 }} / {{ images.length }}</div>
-      <button v-if="images.length > 1" class="lightbox-prev" @click.stop="prevImage" aria-label="Vorheriges Bild">
-        <q-icon name="chevron_left" size="32px" />
-      </button>
-      <button v-if="images.length > 1" class="lightbox-next" @click.stop="nextImage" aria-label="Nächstes Bild">
-        <q-icon name="chevron_right" size="32px" />
-      </button>
+      <button v-if="images.length > 1" class="lightbox-prev" @click.stop="prevImage" aria-label="Vorheriges Bild">‹</button>
+      <button v-if="images.length > 1" class="lightbox-next" @click.stop="nextImage" aria-label="Nächstes Bild">›</button>
       <div class="lightbox-body" @click.stop>
         <img :src="displayUrl(images[current]?.url)" :alt="images[current]?.title || ''" class="lightbox-img" />
         <div class="lightbox-caption">
-          <div class="title">{{ images[current]?.title || 'Kein Titel' }}</div>
+          <div class="title">{{ images[current]?.title }}</div>
           <div class="sub">Bild {{ current + 1 }} von {{ images.length }}</div>
         </div>
       </div>
       <div class="lightbox-thumbs">
-        <button 
-          v-for="(img, idx) in images" 
-          :key="img.filename || idx" 
-          @click.stop="setCurrent(idx)" 
-          :class="['thumb', idx === current ? 'thumb-active' : '']"
-        >
+        <button v-for="(img, idx) in images" :key="img.filename || idx" @click.stop="setCurrent(idx)" :class="['thumb', idx === current ? 'thumb-active' : '']">
           <img :src="displayUrl(img.url)" alt="" />
         </button>
       </div>
@@ -195,16 +84,15 @@
 </template>
 
 <script setup>
-import { computed, ref, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 
 const props = defineProps(['id', 'images'])
 const emit = defineEmits(['uploaded', 'delete-image'])
 const $q = useQuasar()
 const dragIndex = ref(null)
-const dragOver = ref(false)
 
-const baseURL = (import.meta.env.VITE_API_URL ?? (location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api'))
+const baseURL = (import.meta.env.VITE_API_URL ?? 'https://backend-dsk.tripvega.com/api')
 const uploadsBase = computed(() => baseURL.replace(/\/$/, '').replace(/\/api$/, ''))
 const quality = ref('none')
 const qualityOptions = [
@@ -213,10 +101,52 @@ const qualityOptions = [
   { label: 'Mittel', value: 'medium' },
   { label: 'Niedrig', value: 'low' }
 ]
-
+const uploadUrl = computed(() => {
+  const q = quality.value && quality.value !== 'none' ? `?quality=${quality.value}` : ''
+  return `${baseURL}/accommodations/${props.id}/images${q}`
+})
+const authHeader = computed(() => {
+  const t = localStorage.token
+  return t ? [{ name: 'Authorization', value: `Bearer ${t}` }] : []
+})
 const preview = ref(false)
+const previewImg = ref(null)
 const current = ref(0)
 const progress = ref({})
+
+function onUpload(info) {
+  try {
+    const respText = String(info?.xhr?.responseText || '[]')
+    const resp = JSON.parse(respText)
+    const next = Array.isArray(resp) ? resp.map(r => ({
+      ...r,
+      url: r?.url?.startsWith('/uploads') ? `${uploadsBase.value}${r.url}` : r.url
+    })) : props.images
+    normalizeOrderAndCover(next)
+    emit('uploaded', next)
+  } catch (e) {
+    $q.notify({ message: 'Upload-Antwort konnte nicht gelesen werden', color: 'negative', icon: 'error', position: 'top-right' })
+  }
+}
+function onRemove({ files }) {
+  emit('delete-image', files[0].name)
+}
+
+function onRejected(info) {
+  const reason = Array.isArray(info?.rejected) && info.rejected.length
+    ? info.rejected[0]
+    : 'Abgelehntes Datei-Format oder Größenlimit überschritten.'
+  $q.notify({
+    message: typeof reason === 'string' ? reason : 'Upload abgelehnt',
+    color: 'negative',
+    icon: 'error',
+    position: 'top-right'
+  })
+}
+
+function onFailed(file) {
+  $q.notify({ message: `Upload fehlgeschlagen: ${file.name || ''}`, color: 'negative', icon: 'error', position: 'top-right' })
+}
 
 function onSetCover(idx) {
   if (idx === 0) return
@@ -225,7 +155,26 @@ function onSetCover(idx) {
   next.unshift(item)
   normalizeOrderAndCover(next)
   emit('uploaded', next)
-  $q.notify({ message: 'Titelbild aktualisiert', color: 'positive', icon: 'check', position: 'top-right' })
+}
+
+function onMoveLeft(idx) {
+  if (idx <= 0) return
+  const next = props.images.slice()
+  const tmp = next[idx - 1]
+  next[idx - 1] = next[idx]
+  next[idx] = tmp
+  normalizeOrderAndCover(next)
+  emit('uploaded', next)
+}
+
+function onMoveRight(idx) {
+  if (idx >= props.images.length - 1) return
+  const next = props.images.slice()
+  const tmp = next[idx + 1]
+  next[idx + 1] = next[idx]
+  next[idx] = tmp
+  normalizeOrderAndCover(next)
+  emit('uploaded', next)
 }
 
 function onDragStart(idx) {
@@ -245,83 +194,26 @@ function onDrop(targetIdx) {
 function confirmRemove(filename) {
   $q.dialog({
     title: 'Bild löschen?',
-    message: 'Möchten Sie dieses Bild wirklich löschen?',
-    cancel: { label: 'Abbrechen', flat: true },
-    ok: { label: 'Löschen', color: 'negative', unelevated: true },
-    class: 'modern-dialog'
-  }).onOk(() => deleteImage(filename))
-}
-
-async function deleteImage(filename) {
-  if (!props.id || !filename) {
-    console.error('Delete image failed: missing id or filename', { id: props.id, filename })
-    $q.notify({ message: 'Fehler: ID oder Dateiname fehlt', color: 'negative', icon: 'error', position: 'top-right' })
-    return
-  }
-  
-  console.log('Deleting image:', { id: props.id, filename, baseURL })
-  
-  try {
-    progress.value[filename] = -1
-    const t = localStorage.token
-    const url = `${baseURL}/accommodations/${props.id}/images/${encodeURIComponent(filename)}`
-    
-    console.log('DELETE request to:', url)
-    
-    const resp = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        ...(t ? { Authorization: `Bearer ${t}` } : {}),
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-    
-    console.log('DELETE response:', { status: resp.status, ok: resp.ok })
-    
-    if (!resp.ok) {
-      const text = await resp.text()
-      console.error('DELETE failed:', text)
-      
-      // Check if token is invalid (403)
-      if (resp.status === 403) {
-        $q.notify({ 
-          message: 'Sitzung abgelaufen. Bitte melden Sie sich erneut an.', 
-          color: 'warning', 
-          icon: 'warning', 
-          position: 'top-right',
-          timeout: 3000
-        })
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 2000)
-        return
-      }
-      
-      throw new Error(text || `HTTP ${resp.status}`)
+    message: 'Möchtest du dieses Bild wirklich löschen?',
+    cancel: true,
+    ok: {
+      label: 'Löschen',
+      color: 'negative'
     }
-    const remaining = await resp.json()
-    console.log('Remaining images:', remaining)
-    
-    const next = Array.isArray(remaining) ? remaining.map(r => ({
-      ...r,
-      url: r?.url?.startsWith('/uploads') ? `${uploadsBase.value}${r.url}` : r.url
-    })) : props.images.filter(i => i.filename !== filename)
-    normalizeOrderAndCover(next)
-    emit('uploaded', next)
-    $q.notify({ message: 'Bild gelöscht', color: 'positive', icon: 'check', position: 'top-right' })
-  } catch (err) {
-    console.error('Delete image error:', err)
-    $q.notify({ message: `Löschen fehlgeschlagen: ${err.message}`, color: 'negative', icon: 'error', position: 'top-right' })
-  } finally {
-    delete progress.value[filename]
-  }
+  }).onOk(() => emit('delete-image', filename))
 }
 
 function normalizeOrderAndCover(list) {
   list.forEach((img, i) => { img.order = i; img.isCover = i === 0 })
 }
 
+function autoArrange() {
+  const next = props.images.slice().sort((a, b) => String(a.filename).localeCompare(String(b.filename)))
+  normalizeOrderAndCover(next)
+  emit('uploaded', next)
+}
+
+function openPreview(img) { previewImg.value = img; preview.value = true }
 function openLightbox(idx) { current.value = idx; preview.value = true }
 function closeLightbox() { preview.value = false }
 function nextImage() { current.value = (current.value + 1) % (props.images?.length || 1) }
@@ -355,36 +247,23 @@ function displayUrl(url) {
   return url.startsWith('/uploads') ? `${uploadsBase.value}${url}` : url
 }
 
-async function handleDrop(e) {
-  dragOver.value = false
-  const files = Array.from(e.dataTransfer.files || [])
-  await processFiles(files)
-}
-
 async function handleFiles(e) {
   const files = Array.from(e.target.files || [])
-  await processFiles(files)
-  e.target.value = ''
-}
-
-async function processFiles(files) {
   if (!files.length) return
   for (const f of files) {
     if (!['image/jpeg','image/jpg','image/png','image/webp'].includes(f.type)) {
-      $q.notify({ message: `${f.name}: Ungültiges Format`, color: 'negative', icon: 'error' })
-      continue
+      $q.notify({ message: `${f.name}: Ungültiges Format`, color: 'negative', icon: 'error' }); continue
     }
-    if (f.size > 10 * 1024 * 1024) {
-      $q.notify({ message: `${f.name}: Datei zu groß (max 10MB)`, color: 'negative', icon: 'error' })
-      continue
-    }
+    if (f.size > 10 * 1024 * 1024) { $q.notify({ message: `${f.name}: Datei zu groß (max 10MB)`, color: 'negative', icon: 'error' }); continue }
     const processed = await compressClient(f, quality.value)
     await uploadWithProgress(processed)
   }
+  e.target.value = ''
 }
 
 function compressClient(file, q) {
   const type = file.type
+  const noResize = true
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (ev) => {
@@ -433,11 +312,10 @@ function uploadWithProgress(file) {
             const next = Array.isArray(resp) ? resp.map(r => ({ ...r, url: r?.url?.startsWith('/uploads') ? `${uploadsBase.value}${r.url}` : r.url })) : props.images
             normalizeOrderAndCover(next)
             emit('uploaded', next)
-            $q.notify({ message: 'Bild hochgeladen', color: 'positive', icon: 'check', position: 'top-right' })
             resolve(resp)
           } catch (e) { reject(e) }
         } else { reject(new Error(`HTTP ${xhr.status}`)) }
-        setTimeout(() => delete progress.value[file.name], 1000)
+        progress.value[file.name] = 100
       }
     }
     xhr.onerror = () => { progress.value[file.name] = 0; reject(new Error('Upload-Fehler')) }
@@ -447,475 +325,59 @@ function uploadWithProgress(file) {
 </script>
 
 <style scoped>
-.modern-image-uploader {
-  width: 100%;
-}
-
-.upload-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.header-info {
-  flex: 1;
-}
-
-.upload-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 4px 0;
-}
-
-.upload-subtitle {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.quality-select :deep(.q-field__control) {
-  border-radius: 10px;
-}
-
-.add-btn {
-  height: 40px;
-  border-radius: 10px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.drop-zone {
-  border: 3px dashed #cbd5e1;
-  border-radius: 20px;
-  padding: 60px 40px;
-  text-align: center;
-  background: #f8fafc;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.drop-zone:hover, .drop-zone.drag-over {
-  border-color: #667eea;
-  background: #f1f5f9;
-  transform: scale(1.01);
-}
-
-.drop-zone-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.drop-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
-}
-
-.drop-subtitle {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-}
-
-.image-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.image-item {
+.uploader-toolbar { display: flex; align-items: center; }
+.image-card {
+  width: 150px;
+  height: 150px;
   position: relative;
-  aspect-ratio: 4/3;
-  border-radius: 16px;
   overflow: hidden;
-  background: #f8fafc;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-  cursor: move;
 }
-
-.image-item:hover {
-  border-color: #667eea;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-}
-
-.image-item.is-cover {
-  border-color: #f59e0b;
-  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
-}
-
-.cover-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: #f59e0b;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  z-index: 10;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-}
-
 .image-preview {
   width: 100%;
   height: 100%;
-  position: relative;
-  cursor: pointer;
 }
-
-.image-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.image-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.image-preview:hover .image-overlay {
-  opacity: 1;
-}
-
 .image-actions {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  bottom: 4px;
+  left: 4px;
+  right: 4px;
   display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  background: rgba(0,0,0,0.25);
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.image-delete { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.35); color: #fff; z-index: 5; }
+.title-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+}
+.uploader-area {
+  min-height: 260px;
+}
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
-  z-index: 10;
 }
-
-.delete-btn, .star-btn {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.delete-btn:hover {
-  background: #dc2626;
-  transform: scale(1.1);
-}
-
-.star-btn:hover {
-  background: #f59e0b;
-  transform: scale(1.1);
-}
-
-.progress-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: rgba(0, 0, 0, 0.1);
-  z-index: 20;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  transition: width 0.3s ease;
-}
-
-.image-caption {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 8px;
-}
-
-.caption-input :deep(.q-field__control) {
-  border-radius: 8px;
-  min-height: 36px;
-}
-
-.drag-handle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  color: white;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.image-item:hover .drag-handle {
-  opacity: 1;
-}
-
-.add-more-card {
-  aspect-ratio: 4/3;
-  border: 3px dashed #cbd5e1;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  background: #f8fafc;
-  transition: all 0.3s ease;
-}
-
-.add-more-card:hover {
-  border-color: #667eea;
-  background: #f1f5f9;
-  transform: scale(1.02);
-}
-
-.add-more-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.add-more-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: #667eea;
-}
-
-.image-info {
-  display: flex;
-  gap: 24px;
-  margin-top: 20px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-  font-size: 14px;
-}
-
-/* Lightbox Styles */
-.lightbox {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.95);
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.lightbox-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  color: white;
-  border: 0;
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.lightbox-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: rotate(90deg);
-}
-
-.lightbox-count {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 10px 16px;
-  border-radius: 24px;
-  font-weight: 600;
-}
-
-.lightbox-prev, .lightbox-next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  color: white;
-  border: 0;
-  border-radius: 50%;
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.lightbox-prev:hover, .lightbox-next:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-50%) scale(1.1);
-}
-
-.lightbox-prev { left: 20px; }
-.lightbox-next { right: 20px; }
-
-.lightbox-body {
-  max-width: 90vw;
-  max-height: 90vh;
-}
-
-.lightbox-img {
-  max-width: 90vw;
-  max-height: 80vh;
-  object-fit: contain;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-
-.lightbox-caption {
-  margin-top: 16px;
-  color: white;
-  text-align: center;
-}
-
-.lightbox-caption .title {
-  font-weight: 700;
-  font-size: 18px;
-  margin-bottom: 4px;
-}
-
-.lightbox-caption .sub {
-  opacity: 0.7;
-  font-size: 14px;
-}
-
-.lightbox-thumbs {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  overflow-x: auto;
-  max-width: 90vw;
-}
-
-.thumb {
-  width: 72px;
-  height: 72px;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 3px solid transparent;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.thumb:hover {
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: scale(1.05);
-}
-
-.thumb-active {
-  border-color: white;
-  transform: scale(1.1);
-}
-
-.lightbox-help {
-  position: absolute;
-  bottom: 110px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 8px 16px;
-  border-radius: 20px;
-}
-
-@media (max-width: 768px) {
-  .image-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-  }
-  
-  .upload-header {
-    flex-direction: column;
-  }
-  
-  .header-actions {
-    width: 100%;
-    flex-direction: column;
-  }
-  
-  .quality-select {
-    width: 100%;
-  }
-  
-  .add-btn {
-    width: 100%;
-  }
-}
+.drag-handle { cursor: grab; }
+.caption-row { background: rgba(255,255,255,0.9); }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+.lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); color: #fff; border: 0; border-radius: 999px; padding: 12px; cursor: pointer; }
+.lightbox-count { position: absolute; top: 16px; left: 16px; color: #fff; background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 999px; }
+.lightbox-prev, .lightbox-next { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: #fff; border: 0; border-radius: 999px; padding: 16px; cursor: pointer; font-size: 24px; }
+.lightbox-prev { left: 16px; }
+.lightbox-next { right: 16px; }
+.lightbox-body { max-width: 90vw; max-height: 90vh; }
+.lightbox-img { max-width: 90vw; max-height: 80vh; object-fit: contain; border-radius: 8px; }
+.lightbox-caption { position: relative; margin-top: 8px; color: #fff; }
+.lightbox-caption .title { font-weight: 600; }
+.lightbox-caption .sub { opacity: 0.8; font-size: 12px; }
+.lightbox-thumbs { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow-x: auto; max-width: 90vw; }
+.thumb { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 0; padding: 0; background: transparent; cursor: pointer; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-active { outline: 2px solid #fff; transform: scale(1.05); }
+.lightbox-help { position: absolute; bottom: 72px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 12px; }
 </style>

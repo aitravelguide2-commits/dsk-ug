@@ -310,7 +310,7 @@ export default {
             normalized.image = typeof first === 'string' ? first : (first?.url || '')
           }
           if (normalized.image && !String(normalized.image).startsWith('http')) {
-            const baseUrl = import.meta?.env?.VITE_API_URL || 'http://localhost:5000'
+            const baseUrl = import.meta?.env?.VITE_API_URL || 'https://backend-dsk.tripvega.com'
             normalized.image = `${baseUrl}${normalized.image.startsWith('/') ? '' : '/'}${normalized.image}`
           }
           if (!Array.isArray(normalized.features)) {

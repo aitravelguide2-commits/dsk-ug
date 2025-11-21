@@ -1,6 +1,6 @@
 import axios from 'axios'
 import supabase from './supabase.js'
-const baseURL = import.meta.env.VITE_API_URL ?? (location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api')
+const baseURL = import.meta.env.VITE_API_URL ?? 'https://backend-dsk.tripvega.com/api'
 const api = axios.create({ baseURL })
 const disableAuth = String(import.meta.env.VITE_DISABLE_AUTH || '').toLowerCase() === 'true'
 

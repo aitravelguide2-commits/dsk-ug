@@ -54,7 +54,6 @@ const items = computed(() => store.items)
 
 const columns = [
   { name: 'name', field: 'name', label: 'Name', align: 'left' },
-  { name: 'address', field: 'address', label: 'Adresse', align: 'left' },
   { name: 'price_per_night', field: 'price_per_night', label: 'Preis/Nacht', format: v => `€ ${v}` },
   { name: 'max_guests', field: 'max_guests', label: 'Gäste' },
   { name: 'images', label: 'Bild' },

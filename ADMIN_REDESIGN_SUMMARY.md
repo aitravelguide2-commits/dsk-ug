@@ -164,7 +164,7 @@ DEEPSEEK_API_KEY=sk-...
 ```
 
 ### Umgebungsvariablen:
-- `VITE_API_URL`: Backend-URL (Standard: http://localhost:5000/api)
+- `VITE_API_URL`: Backend-URL (Standard: https://backend-dsk.tripvega.com/api)
 
 ## Browser-Kompatibilität
 - ✅ Chrome/Edge (empfohlen)

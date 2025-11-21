@@ -279,7 +279,7 @@ src/
 services/api.js
 
 import axios from 'axios';
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api' });
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'https://backend-dsk.tripvega.com/api' });
 api.interceptors.request.use(cfg => {
   const t = localStorage.token;
   if (t) cfg.headers.Authorization = `Bearer ${t}`;
