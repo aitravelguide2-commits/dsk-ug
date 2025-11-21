@@ -79,8 +79,15 @@ try {
 // API routes
 app.use('/api', routes);
 
-// Error handler
-app.use(errorHandler);
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('🔥 Global Error Handler:', err);
+  console.error(err.stack); // Log full stack trace
+  res.status(err.status || 500).json({ 
+    msg: err.message || 'Serverfehler',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {

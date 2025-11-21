@@ -7,17 +7,25 @@ export const getSupabase = () => {
     const key = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVIDE_ROLE
     
     // Debug: Log environment variables
-    console.log('🔍 Debug Supabase ENV:', {
-      url: url ? '✅ SET' : '❌ MISSING',
-      key: key ? '✅ SET' : '❌ MISSING',
-      allEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
-    })
-    
     if (!url || !key) {
-      throw new Error(`Supabase config missing: url=${!!url}, key=${!!key}`)
+      console.error('❌ Supabase config missing in getSupabase!', {
+        url: !!url,
+        key: !!key,
+        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+      })
+      // Return a dummy client that throws informative errors when used
+      return {
+        from: () => ({ select: () => Promise.reject(new Error('Supabase not configured')) }),
+        auth: { getUser: () => Promise.reject(new Error('Supabase not configured')) }
+      }
     }
     
-    client = createClient(url, key)
+    try {
+      client = createClient(url, key)
+    } catch (err) {
+      console.error('❌ Error creating Supabase client:', err)
+      throw err
+    }
   }
   return client
 }
