@@ -3,7 +3,6 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 
 import sequelize from './config/db.js';
 // Modelle und Relationen initialisieren (Side-Effect Import)
@@ -14,8 +13,8 @@ import errorHandler from './middleware/error.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load env from backend directory
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+// Environment variables are provided by PM2 ecosystem.config.cjs
+// No need to load .env file manually
 
 const app = express();
 
