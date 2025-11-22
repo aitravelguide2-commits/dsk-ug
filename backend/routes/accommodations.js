@@ -112,7 +112,17 @@ router.post('/:id/images', authenticate, permit('admin','editor'), upload.array(
     }
   }
   
-  const imgs = req.files.map(f => ({ url: `/uploads/${f.filename}`, filename: f.filename }))
+  // Upload to Supabase Storage
+  const { uploadToSupabase } = await import('../services/storage.js');
+  const uploadPromises = req.files.map(async (f) => {
+    const buffer = await fs.promises.readFile(f.path);
+    const result = await uploadToSupabase(buffer, f.originalname, f.mimetype);
+    // Delete local temp file
+    await fs.promises.unlink(f.path).catch(() => {});
+    return result;
+  });
+  
+  const imgs = await Promise.all(uploadPromises);
   const nextImages = [ ...(acc?.images || []), ...imgs ]
   
   const { error } = await getSupabase()
@@ -156,6 +166,7 @@ router.delete('/:id/images/:file', authenticate, permit('admin','editor'), async
   if (gErr?.code === 'PGRST116') return res.status(404).json({ msg: 'Nicht gefunden' })
   if (gErr) return res.status(500).json({ msg: 'Fehler' })
   
+  
   const remaining = (acc?.images || []).filter(i => i.filename !== fname)
   
   const { error } = await getSupabase()
@@ -167,12 +178,18 @@ router.delete('/:id/images/:file', authenticate, permit('admin','editor'), async
     return res.status(500).json({ msg: error.message || 'Fehler', details: error.details || null })
   }
   
+  // Delete from Supabase Storage
   try {
-    const uploadDir = path.resolve(process.cwd(), process.env.UPLOAD_PATH || path.join('uploads','images'))
-    const filePath = path.join(uploadDir, fname)
-    if (!filePath.startsWith(uploadDir)) throw new Error('Pfadvalidierung fehlgeschlagen')
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-  } catch (e) { /* ignore */ }
+    const { deleteFromSupabase, extractFilenameFromUrl } = await import('../services/storage.js');
+    const imageToDelete = (acc?.images || []).find(i => i.filename === fname);
+    if (imageToDelete) {
+      // Extract filename from URL if it's a Supabase URL
+      const filenameToDelete = extractFilenameFromUrl(imageToDelete.url) || fname;
+      await deleteFromSupabase(filenameToDelete);
+    }
+  } catch (e) { 
+    console.error('Error deleting from Supabase Storage:', e);
+  }
   
   res.json(remaining)
 });
