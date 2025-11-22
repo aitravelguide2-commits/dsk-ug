@@ -64,7 +64,7 @@
 
 <script setup>
 import { onMounted, ref, computed } from 'vue'
-import { useQuasar } from 'quasar'
+import { Loading, Notify } from 'quasar'
 import api from '../services/api.js'
 
 const bookings = ref([])
@@ -73,9 +73,15 @@ const tab = ref('requests')
 
 const columns = [
   { name: 'guest_name', field: 'guest_name', label: 'Gast', align: 'left' },
-  { name: 'Accommodation.name', field: row => row.Accommodation?.name || 'Unbekannt', label: 'Unterkunft', align: 'left' },
+  { name: 'guest_email', field: 'guest_email', label: 'E-Mail', align: 'left' },
+  { name: 'Accommodation.name', field: row => row.Accommodation?.name || row.accommodation_name || 'Unbekannt', label: 'Unterkunft', align: 'left' },
   { name: 'check_in', field: 'check_in', label: 'Von', format: v => new Date(v).toLocaleDateString(), align: 'left' },
   { name: 'check_out', field: 'check_out', label: 'Bis', format: v => new Date(v).toLocaleDateString(), align: 'left' },
+  { name: 'guests', field: row => {
+    // Try to parse guests from notes field
+    const match = row.notes?.match(/Gäste:\s*(\d+)/);
+    return match ? match[1] : '-';
+  }, label: 'Personen', align: 'center' },
   { name: 'total_price', field: 'total_price', label: 'Preis', format: v => `€ ${v}`, align: 'right' },
   { name: 'status', field: 'status', label: 'Status', align: 'center' },
   { name: 'actions', label: 'Aktionen', field: 'actions', align: 'center' }
@@ -103,8 +109,6 @@ async function loadBookings() {
   }
 }
 
-const $q = useQuasar()
-
 async function updateStatus(id, status) {
   try {
     // Optimistic update
@@ -115,23 +119,23 @@ async function updateStatus(id, status) {
     
     if (status === 'confirmed') {
       try {
-        $q.loading.show({ message: 'Sende Bestätigungs-E-Mail...' })
+        Loading.show({ message: 'Sende Bestätigungs-E-Mail...' })
         await api.post(`/mail/send-confirmation/${id}`)
-        $q.notify({ type: 'positive', message: 'Buchung bestätigt und E-Mail gesendet' })
+        Notify.create({ type: 'positive', message: 'Buchung bestätigt und E-Mail gesendet' })
       } catch (e) {
         console.error('Failed to send confirmation email', e)
-        $q.notify({ type: 'warning', message: 'Buchung bestätigt, aber E-Mail konnte nicht gesendet werden.' })
+        Notify.create({ type: 'warning', message: 'Buchung bestätigt, aber E-Mail konnte nicht gesendet werden.' })
       } finally {
-        $q.loading.hide()
+        Loading.hide()
       }
     } else {
-      $q.notify({ type: 'positive', message: 'Status aktualisiert' })
+      Notify.create({ type: 'positive', message: 'Status aktualisiert' })
     }
 
     await loadBookings() // Reload to be sure
   } catch (err) {
     console.error('Update failed', err)
-    $q.notify({ type: 'negative', message: 'Fehler beim Aktualisieren' })
+    Notify.create({ type: 'negative', message: 'Fehler beim Aktualisieren' })
     await loadBookings() // Revert on error
   }
 }

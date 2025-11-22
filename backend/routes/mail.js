@@ -135,6 +135,49 @@ router.post('/send-booking', async (req, res) => {
     }
 
     const nights = Math.ceil((co - ci) / (1000 * 60 * 60 * 24))
+    
+    // Check availability for all days in the range
+    const { Op } = await import('sequelize')
+    const existingBookings = await Booking.findAll({
+      where: {
+        accommodation_id: b.accommodationId,
+        status: { [Op.not]: 'cancelled' },
+        [Op.or]: [
+          // Check if any booking overlaps with requested dates
+          {
+            check_in: { [Op.lt]: b.checkOut },
+            check_out: { [Op.gt]: b.checkIn }
+          }
+        ]
+      }
+    })
+
+    // Check if any day in the requested range is blocked
+    const dayMs = 24 * 60 * 60 * 1000
+    for (let d = new Date(ci); d < new Date(co); d = new Date(d.getTime() + dayMs)) {
+      const isBlocked = existingBookings.some(booking => {
+        const bookingStart = new Date(booking.check_in)
+        const bookingEnd = new Date(booking.check_out)
+        return d >= bookingStart && d < bookingEnd
+      })
+      
+      if (isBlocked) {
+        return res.status(400).json({ 
+          success: false, 
+          msg: `Der Zeitraum ist nicht vollständig verfügbar. Mindestens der ${d.toLocaleDateString('de-DE')} ist bereits gebucht.`
+        })
+      }
+    }
+
+    // Check minimum stay requirement (if set on accommodation)
+    const minStay = accommodation.min_stay || 0
+    if (minStay > 0 && nights < minStay) {
+      return res.status(400).json({
+        success: false,
+        msg: `Mindestaufenthalt für diese Unterkunft: ${minStay} ${minStay === 1 ? 'Nacht' : 'Nächte'}. Sie haben ${nights} ${nights === 1 ? 'Nacht' : 'Nächte'} gewählt.`
+      })
+    }
+
     const totalPrice = Number(b.totalPrice || 0)
     const to = process.env.MICROSOFT_MAIL_TO || 'info@dsk-ug.de'
 
