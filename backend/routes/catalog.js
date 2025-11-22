@@ -40,9 +40,14 @@ router.get('/accommodations', async (req, res, next) => {
     const makeAbs = (url) => {
       const u = normalizeUrl(url)
       if (!u) return ''
-      if (u.startsWith('http')) return u
+      
+      // Replace localhost URLs with the actual backend domain
+      let fixedUrl = u.replace(/http:\/\/localhost:5000/g, 'https://backend-dsk.tripvega.com')
+      fixedUrl = fixedUrl.replace(/https:\/\/localhost:5000/g, 'https://backend-dsk.tripvega.com')
+      
+      if (fixedUrl.startsWith('http')) return fixedUrl
       const base = `${req.protocol}://${req.get('host')}`
-      return u.startsWith('/') ? `${base}${u}` : `${base}/${u}`
+      return fixedUrl.startsWith('/') ? `${base}${fixedUrl}` : `${base}/${fixedUrl}`
     }
     const data = (list || []).map(acc => ({
       id: acc.id,
