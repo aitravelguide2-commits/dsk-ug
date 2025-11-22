@@ -64,6 +64,7 @@
 
 <script setup>
 import { onMounted, ref, computed } from 'vue'
+import { useQuasar } from 'quasar'
 import api from '../services/api.js'
 
 const bookings = ref([])
@@ -102,6 +103,8 @@ async function loadBookings() {
   }
 }
 
+const $q = useQuasar()
+
 async function updateStatus(id, status) {
   try {
     // Optimistic update
@@ -109,9 +112,26 @@ async function updateStatus(id, status) {
     if (booking) booking.status = status
     
     await api.put(`/bookings/${id}`, { status })
+    
+    if (status === 'confirmed') {
+      try {
+        $q.loading.show({ message: 'Sende Bestätigungs-E-Mail...' })
+        await api.post(`/mail/send-confirmation/${id}`)
+        $q.notify({ type: 'positive', message: 'Buchung bestätigt und E-Mail gesendet' })
+      } catch (e) {
+        console.error('Failed to send confirmation email', e)
+        $q.notify({ type: 'warning', message: 'Buchung bestätigt, aber E-Mail konnte nicht gesendet werden.' })
+      } finally {
+        $q.loading.hide()
+      }
+    } else {
+      $q.notify({ type: 'positive', message: 'Status aktualisiert' })
+    }
+
     await loadBookings() // Reload to be sure
   } catch (err) {
     console.error('Update failed', err)
+    $q.notify({ type: 'negative', message: 'Fehler beim Aktualisieren' })
     await loadBookings() // Revert on error
   }
 }

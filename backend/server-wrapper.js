@@ -6,6 +6,16 @@ process.env.JWT_EXPIRE = '24h';
 process.env.SUPABASE_PROJECT_URL = 'https://hgttnevlpcewtpotwkvc.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhndHRuZXZscGNld3Rwb3R3a3ZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjE4Njc3MiwiZXhwIjoyMDc3NzYyNzcyfQ.zXMqDUbqA5fznGNUbglXPaMGJTiDnsg--Z5FB1wTizA';
 
+// Microsoft Graph API for email sending
+// Microsoft Graph API for email sending
+// Secrets are injected via environment variables or manual config on server
+process.env.MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || '';
+process.env.MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || '';
+process.env.MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
+process.env.MICROSOFT_SENDER_EMAIL = 'mert.karaca@dsk-ug.de';
+process.env.MICROSOFT_MAIL_TO = 'mert.karaca@dsk-ug.de';
+
+
 console.log('🔧 Environment variables hardcoded:');
 console.log('  SUPABASE_PROJECT_URL:', process.env.SUPABASE_PROJECT_URL ? '✅ SET' : '❌ MISSING');
 console.log('  SUPABASE_SERVICE_ROLE:', process.env.SUPABASE_SERVICE_ROLE ? '✅ SET' : '❌ MISSING');

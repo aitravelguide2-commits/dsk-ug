@@ -9,7 +9,7 @@
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
             </svg>
           </div>
-          <div class="hidden sm:block">
+          <div>
             <h1 class="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent group-hover:from-sky-600 group-hover:to-indigo-600 transition-all duration-300">DSK-UG</h1>
             <p class="text-xs text-slate-500">Monteurunterkünfte</p>
           </div>

@@ -3,71 +3,76 @@ import { Booking, Accommodation } from '../models/index.js'
 import { getSupabase } from '../services/supabase.js'
 import { generateBookingPDF } from '../services/pdfGenerator.js'
 
+import { authenticate, permit } from '../middleware/auth.js'
+import { sendGraphMail } from '../services/mail.js'
+
 const router = express.Router()
 
 const required = (obj, keys) => keys.every(k => obj && obj[k])
 const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || ''))
 
-async function getGraphToken() {
-  const tenant = process.env.MICROSOFT_TENANT_ID || 'common'
-  const clientId = process.env.MICROSOFT_CLIENT_ID
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET
-  if (!clientId || !clientSecret) throw new Error('Microsoft Graph Credentials missing')
-  const params = new URLSearchParams()
-  params.append('client_id', clientId)
-  params.append('client_secret', clientSecret)
-  params.append('grant_type', 'client_credentials')
-  params.append('scope', 'https://graph.microsoft.com/.default')
-  const resp = await fetch(`https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params
-  })
-  if (!resp.ok) {
-    const errorText = await resp.text()
-    console.error('Microsoft Token Error:', errorText)
-    throw new Error(`Token error ${resp.status}: ${errorText}`)
-  }
-  const data = await resp.json()
-  return data.access_token
-}
+router.post('/send-confirmation/:bookingId', authenticate, permit('admin', 'editor'), async (req, res) => {
+  try {
+    const { bookingId } = req.params
+    const booking = await Booking.findByPk(bookingId, {
+      include: [Accommodation]
+    })
 
-async function sendGraphMail({ to, cc, subject, html, attachments = [] }) {
-  const token = await getGraphToken()
-  const endpoint = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(to)}/sendMail`
-  
-  const message = {
-    subject,
-    body: { contentType: 'HTML', content: html },
-    toRecipients: [{ emailAddress: { address: to } }],
-    ccRecipients: cc ? [{ emailAddress: { address: cc } }] : []
-  }
+    if (!booking) {
+      return res.status(404).json({ success: false, msg: 'Buchung nicht gefunden' })
+    }
 
-  // Add attachments if provided
-  if (attachments && attachments.length > 0) {
-    message.attachments = attachments.map(att => ({
-      '@odata.type': '#microsoft.graph.fileAttachment',
-      name: att.filename,
-      contentType: att.contentType || 'application/pdf',
-      contentBytes: att.content.toString('base64')
-    }))
-  }
+    const acc = booking.Accommodation
+    if (!acc) {
+      return res.status(404).json({ success: false, msg: 'Unterkunft nicht gefunden' })
+    }
 
-  const body = {
-    message,
-    saveToSentItems: true
-  }
+    const guestEmail = booking.guest_email
+    if (!isEmail(guestEmail)) {
+      return res.status(400).json({ success: false, msg: 'Ungültige Gäste-E-Mail' })
+    }
 
-  const resp = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body)
-  })
-  if (!resp.ok) {
-    const t = await resp.text()
-    throw new Error(`Graph sendMail ${resp.status}: ${t}`)
+    const subject = `Buchungsbestätigung #${booking.id} - ${acc.name}`
+    const checkIn = new Date(booking.check_in).toLocaleDateString('de-DE')
+    const checkOut = new Date(booking.check_out).toLocaleDateString('de-DE')
+    
+    const html = `
+      <h2>Buchungsbestätigung</h2>
+      <p>Sehr geehrte/r ${booking.guest_name},</p>
+      <p>wir freuen uns, Ihnen mitteilen zu können, dass Ihre Buchung bestätigt wurde.</p>
+      
+      <h3>Details zur Unterkunft:</h3>
+      <p><strong>Unterkunft:</strong> ${acc.name}</p>
+      <p><strong>Adresse:</strong> ${acc.address}, ${acc.location}</p>
+      
+      <h3>Buchungsdaten:</h3>
+      <p><strong>Check-in:</strong> ${checkIn}</p>
+      <p><strong>Check-out:</strong> ${checkOut}</p>
+      <p><strong>Gesamtpreis:</strong> €${Number(booking.total_price).toFixed(2)}</p>
+      
+      <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+      <br>
+      <p>Mit freundlichen Grüßen<br>Ihr DSK-UG Team</p>
+    `
+
+    await sendGraphMail({
+      to: guestEmail,
+      subject,
+      html
+    })
+
+    // Update status if not already confirmed
+    if (booking.status !== 'confirmed') {
+      booking.status = 'confirmed'
+      await booking.save()
+    }
+
+    res.json({ success: true, msg: 'Bestätigungs-E-Mail gesendet' })
+  } catch (err) {
+    console.error('[mail:send-confirmation]', err)
+    res.status(500).json({ success: false, msg: 'Fehler beim Senden der Bestätigung: ' + err.message })
   }
-}
+})
 
 router.post('/send-booking', async (req, res) => {
   try {

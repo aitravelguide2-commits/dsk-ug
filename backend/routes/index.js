@@ -10,6 +10,7 @@ import uploads from './uploads.js';
 import ai from './ai.js';
 import pricing from './pricing.js';
 import availabilityRules from './availability_rules.js';
+import contact from './contact.js';
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.use('/dashboard', dashboard);
 router.use('/catalog', catalog);
 // Mail endpoints (public)
 router.use('/mail', mail);
+router.use('/contact', contact);
 router.use('/uploads', uploads);
 // AI helper endpoints
 router.use('/ai', ai);

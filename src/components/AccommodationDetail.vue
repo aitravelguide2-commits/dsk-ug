@@ -34,7 +34,7 @@
             <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
             </svg>
-            {{ $t('locations.' + computeLocationKey(accommodation.location)) }}
+            {{ getLocationName(accommodation.location) }}
           </div>
           <div class="flex items-center">
             <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -85,7 +85,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <h2 class="text-2xl font-semibold text-gray-900 mb-2">
-                  {{ $t('accommodationDetail.title', { location: $t('locations.' + accommodation.location) }) }}
+                  {{ $t('accommodationDetail.title', { location: getLocationName(accommodation.location) }) }}
                 </h2>
                 <p class="text-gray-600">
                   {{ $t('accommodationDetail.hostLabel') }}: DSK-UG Monteurunterkünfte
@@ -123,7 +123,7 @@
             <h3 class="text-xl font-semibold text-gray-900 mb-6">{{ $t('accommodationDetail.whereStay') }}</h3>
             <div class="bg-gray-50 rounded-2xl p-6">
               <div class="mb-4">
-                <h4 class="font-semibold text-gray-800 mb-2">{{ $t('locations.' + computeLocationKey(accommodation.location)) }}</h4>
+                <h4 class="font-semibold text-gray-800 mb-2">{{ getLocationName(accommodation.location) }}</h4>
                 <p class="text-gray-600">{{ $t('accommodationDetail.location.subtitle') }}</p>
               </div>
               <InteractiveMap
@@ -607,6 +607,13 @@ export default {
       }
     },
     
+    getLocationName(loc) {
+      if (!loc) return ''
+      const key = 'locations.' + this.computeLocationKey(loc)
+      const trans = this.$t(key)
+      return trans === key ? loc : trans
+    },
+    
     getFeatureIcon(feature) {
       const icons = {
         wifi: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.07 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>',
@@ -614,7 +621,9 @@ export default {
         parking: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3H6v18h4v-6h3c3.31 0 6-2.69 6-6s-2.69-6-6-6zm.2 8H10V7h3.2c1.1 0 2 .9 2 2s-.9 2-2 2z"/></svg>',
         tv: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5l-1 1v2h8v-2l-1-1h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12H3V5h18v10z"/></svg>',
         washing_machine: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2.01L6 2c-1.1 0-2 .89-2 2v16c0 1.11.89 2 2 2h12c1.1 0 2-.89 2-2V4c0-1.11-.89-1.99-2-1.99zM18 20H6V4h12v16zM12 6c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>',
-        balcony: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 10v2H8v-2h2zm6 2v-2h2v2h-2zm-3 0V8h-2v4h2zm-1-9L2 8v13h20V8l-10-5zM4.5 19v-7.5h15V19h-15z"/></svg>'
+        balcony: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 10v2H8v-2h2zm6 2v-2h2v2h-2zm-3 0V8h-2v4h2zm-1-9L2 8v13h20V8l-10-5zM4.5 19v-7.5h15V19h-15z"/></svg>',
+        bathroom: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 13V4.83C20 3.27 18.73 2 17.17 2c-.75 0-1.47.3-2 .83l-1.25 1.25c-.16-.05-.33-.08-.5-.08-.85 0-1.63.42-2.12 1.09l-.63-.63C10.13 3.92 9.59 3.67 9 3.67c-1.84 0-3.33 1.49-3.33 3.33 0 .17.02.34.05.5L2.5 10.75c-.5.5-.5 1.3 0 1.8l1.7 1.7c.5.5 1.3.5 1.8 0l3.25-3.25c.16.03.33.05.5.05 1.84 0 3.33-1.49 3.33-3.33 0-.59-.15-1.14-.42-1.63l.63-.63c.2-.2.45-.31.71-.31.26 0 .51.11.71.31l1.25 1.25c.5.5 1.3.5 1.8 0 .5-.5.5-1.3 0-1.8l-1.25-1.25c.16-.05.33-.08.5-.08.28 0 .5.22.5.5v8.17c0 1.1.9 2 2 2s2-.9 2-2zM4.2 12.55l-1.7-1.7 3.25-3.25.85.85-2.4 4.1z"/></svg>',
+        private_bathroom: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 13V4.83C20 3.27 18.73 2 17.17 2c-.75 0-1.47.3-2 .83l-1.25 1.25c-.16-.05-.33-.08-.5-.08-.85 0-1.63.42-2.12 1.09l-.63-.63C10.13 3.92 9.59 3.67 9 3.67c-1.84 0-3.33 1.49-3.33 3.33 0 .17.02.34.05.5L2.5 10.75c-.5.5-.5 1.3 0 1.8l1.7 1.7c.5.5 1.3.5 1.8 0l3.25-3.25c.16.03.33.05.5.05 1.84 0 3.33-1.49 3.33-3.33 0-.59-.15-1.14-.42-1.63l.63-.63c.2-.2.45-.31.71-.31.26 0 .51.11.71.31l1.25 1.25c.5.5 1.3.5 1.8 0 .5-.5.5-1.3 0-1.8l-1.25-1.25c.16-.05.33-.08.5-.08.28 0 .5.22.5.5v8.17c0 1.1.9 2 2 2s2-.9 2-2zM4.2 12.55l-1.7-1.7 3.25-3.25.85.85-2.4 4.1z"/></svg>'
       }
       return icons[feature] || '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'
     },
@@ -649,7 +658,7 @@ export default {
       return {
         lat,
         lng,
-        popup: `<strong>${accommodation.name}</strong><br>${this.$t('locations.' + this.computeLocationKey(accommodation.location))}<br>${accommodation.price}€ ${this.$t('accommodations.perNight')}`,
+        popup: `<strong>${accommodation.name}</strong><br>${this.getLocationName(accommodation.location)}<br>${accommodation.price}€ ${this.$t('accommodations.perNight')}`,
         tooltip: accommodation.name
       }
     },
